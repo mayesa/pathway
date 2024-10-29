@@ -62,7 +62,8 @@ module Pathway
         delegate %i[model_class search_field model_not_found] => 'self.class'
         delegate :db => :model_class
 
-        def fetch_model(state, from: model_class, search_by: search_field, using: search_by, to: result_key, overwrite: false, error_message: nil, **)
+        def fetch_model(state, from: model_class, search_by: search_field, using: search_by,
+                        to: result_key, overwrite: false, error_message: nil, with_restrict: true, **)
           error_message ||= if (from == model_class)
                               model_not_found
                             elsif from.respond_to?(:name) || from.respond_to?(:model)
@@ -72,15 +73,21 @@ module Pathway
 
           if state[to].nil? || overwrite
             wrap_if_present(state[:input][using], message: error_message)
-              .then { |key| find_model_with(key, from, search_by, error_message) }
+              .then { |key| find_model_with(key, with_restrict, from, search_by, error_message) }
               .then { |model| state.update(to => model) }
           else
             state
           end
         end
 
-        def find_model_with(key, dataset = model_class, column = search_field, error_message = nil)
-          wrap_if_present(dataset.first(column => key), message: error_message)
+        def find_model_with(key, with_restrict, dataset = model_class, column = search_field, error_message = nil)
+          if with_restrict == true
+            current_user = context[:current_user]
+            value = dataset.search(restrict: current_user, column => key).first
+          else
+            value = dataset.first(column => key)
+          end
+          wrap_if_present(value, message: error_message)
         end
       end
 
