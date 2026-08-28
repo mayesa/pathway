@@ -82,8 +82,12 @@ module Pathway
 
         def find_model_with(key, with_restrict, dataset = model_class, column = search_field, error_message = nil)
           if with_restrict == true
-            current_user = context[:current_user]
-            value = dataset.search(restrict: current_user, column => key).first
+            search_params = {
+              restrict: context[:current_user],
+              column => key,
+              integration_source: context[:integration_source]
+            }.compact_blank
+            value = dataset.search(**search_params).first
           else
             value = dataset.first(column => key)
           end
